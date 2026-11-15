@@ -1,0 +1,1 @@
+{"appUrl":null,"buckets":[],"enumerated":false,"findings":[],"generatedAt":"2026-11-15T00:00:00.000Z","notes":["Empty baseline example. Run vibeleak scan --out report.json, then copy the report here as your baseline."],"projectUrl":"https://YOUR-PROJECT-REF.supabase.co","tables":[],"tool":"vibeleak","verdict":"CLEAN","version":1}

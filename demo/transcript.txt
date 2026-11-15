@@ -1,0 +1,54 @@
+# vibeleak demo - real CLI output on the SYNTHETIC local fixtures
+# (fake Lovable-style app + fake PostgREST server on 127.0.0.1;
+#  anon key is a self-signed synthetic JWT; row values are fake
+#  and never stored - only column names and a 0/1 rows flag.)
+
+$ vibeleak scan <app-url> --i-own-this-app --out report-before.json
+scanning http://127.0.0.1:37965 ...
+project: http://127.0.0.1:37965 (Supabase URL found in shipped JavaScript)
+anon key: found (role anon)
+tables: 3 enumerated via OpenAPI
+  orders: 0 row(s) visible
+  profiles: 1 row(s) visible, columns: id, email, passport_no
+  public_posts: 1 row(s) visible, columns: id, title, body (allowlisted: public by design)
+storage buckets: 3
+  uploads: object listing allowed
+  public-assets: object listing allowed (allowlisted)
+  private-files: not listable
+findings:
+  LEAK: profiles (1 row visible, columns: id, email, passport_no) - anonymous GET returns 1 row(s); table is not allowlisted
+  LEAK: uploads - anonymous object listing is allowed; bucket is not allowlisted
+verdict: LEAK - an anonymous visitor can read data (exit 1)
+exit: 1
+
+# the app owner enables Row Level Security and locks the bucket:
+# (fixture restarted with FAKE_MODE=fixed)
+
+$ vibeleak scan <app-url> --i-own-this-app --out report-after.json
+scanning http://127.0.0.1:37311 ...
+project: http://127.0.0.1:37311 (Supabase URL found in shipped JavaScript)
+anon key: found (role anon)
+tables: 3 enumerated via OpenAPI
+  orders: 0 row(s) visible
+  profiles: 0 row(s) visible
+  public_posts: 1 row(s) visible, columns: id, title, body (allowlisted: public by design)
+storage buckets: 3
+  uploads: not listable
+  public-assets: object listing allowed (allowlisted)
+  private-files: not listable
+verdict: CLEAN - anonymous read clean (not a full audit; see Honest limits)
+
+$ vibeleak check --report report-after.json --baseline report-before.json
+checking report-after.json against baseline report-before.json ...
+public_posts still public by design (allowlisted)
+no regressions vs baseline
+verdict: CLEAN - anonymous read clean (not a full audit; see Honest limits)
+
+$ vibeleak diff --baseline report-before.json --report report-after.json
+private-files: CLEAN -> CLEAN
+public-assets: ALLOWLISTED -> ALLOWLISTED
+uploads: LEAK -> CLEAN (fixed)
+orders: CLEAN -> CLEAN
+profiles: LEAK -> CLEAN (fixed)
+public_posts: ALLOWLISTED -> ALLOWLISTED
+2 fixed, 0 new leaks, 0 regressions
